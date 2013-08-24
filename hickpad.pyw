@@ -196,13 +196,33 @@ class PageAlarm(wx.Panel):
         conn = sqlite3.connect(db_file)
         c = conn.cursor()
         if not db_file_flag:
+            #  提醒表
             c.execute('''CREATE TABLE [alarm] (
                       [aid] INTEGER PRIMARY KEY, 
                       [title] VARCHAR(255),
                       [content] TEXT, 
                       [plan_time] VARCHAR(16), 
                       [add_time] VARCHAR(16),
-                      [state] INT DEFAULT 0);''')
+                      [state] INT DEFAULT 0);''')     ### state 默认为 0 ， 正常查询，只获得 < 1 的查询选项。
+
+            # 任务表: 移植抓取系统表结构先
+            c.execute('''CREATE TABLE [tasks] (
+                      [id] INTEGER PRIMARY KEY, 
+                      [name] VARCHAR(255),
+                      [desciption] TEXT, 
+                      [last_time] VARCHAR(16), 
+                      [next_time] VARCHAR(16),
+                      [item_time] VARCHAR(16),
+                      [created_at] VARCHAR(16),
+                      [updated_at] VARCHAR(16),
+                      [msg] VARCHAR(255),
+                      [rev1] VARCHAR(255),
+                      [rev2] VARCHAR(255),
+                      [title] VARCHAR(255),
+                      [url] VARCHAR(255),
+                      [type] VARCHAR(255),
+                      [day_count] INT DEFAULT 0);''')
+
         items = []
         i = 1
         c.execute('select aid, title, plan_time, add_time from alarm where state < 1 limit 100')
