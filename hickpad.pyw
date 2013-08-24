@@ -25,6 +25,8 @@ import socket   # 用于控制超时等
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 import wx.lib.masked          as masked
 
+import os
+import traceback # dolog 需要
 
 # 语音 tts
 import pyttsx
@@ -50,6 +52,10 @@ else:
 
 """
 记录 log 的调试函数: 默认去当前文件夹
+    注意中文可能某些输入的时候是 unicode 的话，有这样的差别:
+    dolog("I am Hick")
+    dolog("中文")
+    dolog(u"我只中文hick".encode("UTF-8"))
 """
 def dolog(text, name = ''):
     if len(name) < 1:
@@ -61,6 +67,8 @@ def dolog(text, name = ''):
     last_line = trace[0][1]
 
     file(log_file, 'a').write(time.strftime("%Y-%m-%d %H:%M:%S\t") + last_file + "\t" + str(last_line) + "\t" + text + "\n")
+
+dolog("hickpad启动了") ### 要用中文以免文件不是 utf8
 
 #=======================================================================
 class PageEditor(wx.Panel):
@@ -206,7 +214,7 @@ class PageAlarm(wx.Panel):
         ### 任务执行器, 没 30 分钟执行一次， 注意太短了会导致任务没执行完，下次任务又开始
         self.timerTask = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.onCheckTask, self.timerTask)
-        self.timerTask.Start(1000 * 60 * 3)  ### 调试 10s
+        self.timerTask.Start(1000 * 60 * 60) # 暂定每小时执行一次
 
         ### tts
         self.engine = pyttsx.init()
@@ -301,6 +309,8 @@ class PageAlarm(wx.Panel):
         """
         任务检查
         """
+
+        dolog("start check task")
         
         db_file = os.path.join(exe_dir, 'data.db3')
         conn = sqlite3.connect(db_file)
@@ -317,8 +327,8 @@ class PageAlarm(wx.Panel):
             selector = row[3]
             title = row[4]
 
-            print time.strftime('%Y-%m-%d %H:%M')
-            print row
+            # print time.strftime('%Y-%m-%d %H:%M')
+            # print row
 
             dolog(str(row))
             
@@ -349,7 +359,7 @@ class PageAlarm(wx.Panel):
                 if len(get_list) > 1 :
                     # txt = u"博客域名收录网页数量：" + get_list[1]
                     txt = time.strftime('%Y-%m-%d %H:%M ') + title + "," + get_list[1]
-                    dolog("speak out the text: " + txt)
+                    dolog(txt.encode("UTF-8")) 
 
 
             self.engine.say(txt)
