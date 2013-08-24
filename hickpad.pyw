@@ -7,6 +7,7 @@ import wx.stc
 import sys
 import os
 import time
+import re
 import datetime
 import ctypes
 
@@ -29,7 +30,8 @@ import wx.lib.masked          as masked
 import pyttsx
 # 剪切板
 import win32clipboard 
-
+# 抓取分析网页
+from bs4 import BeautifulSoup
 
 # 获得可执行文件所在路径(注意 os.path.getcwd 获得的是命令行启动的当前路径)
 exe_dir = os.path.dirname(sys.argv[0])
@@ -186,6 +188,15 @@ class PageAlarm(wx.Panel):
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.onCheckAlarm, self.timer)
         self.timer.Start(5000)    # 每 5s 检查一次
+
+        ### 任务执行器, 没 30 分钟执行一次， 注意太短了会导致任务没执行完，下次任务又开始
+        self.timerTask = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.onCheckTask, self.timerTask)
+        self.timerTask.Start(1000 * 60 * 3)  ### 调试 10s
+
+        ### tts
+        self.engine = pyttsx.init()
+
         
     def setListCtrl(self):
         """
@@ -271,6 +282,65 @@ class PageAlarm(wx.Panel):
             Alarm = AlarmView(self, aid)
             Alarm.Show()    # 注意这里如果是 ShowModal 的话，会不必要的阻塞程序
 
+
+    def onCheckTask(self, event):
+        """
+        任务检查
+        """
+        
+        db_file = os.path.join(exe_dir, 'data.db3')
+        conn = sqlite3.connect(db_file)
+        c = conn.cursor()
+        items = []
+        i = 1
+        check_sql = "select id,name,url,rev1,title from tasks where type < 2 and next_time <= '%s'" % (time.strftime('%Y-%m-%d %H:%M'), )
+        c.execute(check_sql)
+#        print time.strftime('%Y-%m-%d %H:%M')
+        to_alarm = []
+        for row in c:
+            ### google 网站收录数需要特别处理下
+            url = row[2]
+            selector = row[3]
+            title = row[4]
+
+            print time.strftime('%Y-%m-%d %H:%M')
+            print row
+            
+            send_headers = {
+              'User-Agent' : 'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1',
+              "Accept": "image/gif, image/jpeg, application/xaml+xml,  */*",
+            }
+            proto, rest = urllib.splittype(url)  
+            host, rest = urllib.splithost(rest) 
+            send_headers['Host'] = host
+            req = urllib2.Request(url, headers=send_headers) 
+            response = urllib2.urlopen(req)
+            content = response.read()
+            reg = re.compile(r'''> +''')
+            content = reg.subn('>', content)[0]
+            soup = BeautifulSoup(content)
+            try_list = (selector, 'div.artic_text')
+            for selector in try_list:
+                selected_item = soup.select(selector)
+                if len(selected_item) > 0:
+                    break
+
+            txt = time.strftime('%Y-%m-%d %H:%M') + u"没找到"
+            if len(selected_item) > 0:
+                get_str =  selected_item[0].string
+                get_list = get_str.split(" ")
+
+                if len(get_list) > 1 :
+                    # txt = u"博客域名收录网页数量：" + get_list[1]
+                    txt = time.strftime('%Y-%m-%d %H:%M ') + title + "," + get_list[1]
+
+
+            self.engine.say(txt)
+            self.engine.runAndWait()
+            # print "find sth"
+            # print selected_item                
+
+        conn.close()
         
     def onDoubleClick(self, event):
         # curr_item 为行索引，从 0 开始的
