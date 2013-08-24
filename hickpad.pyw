@@ -48,6 +48,20 @@ else:
     pb = 12
     
 
+"""
+记录 log 的调试函数: 默认去当前文件夹
+"""
+def dolog(text, name = ''):
+    if len(name) < 1:
+        name = 'log.txt'
+    log_file = os.path.join(os.path.dirname(sys.argv[0]), name)
+
+    trace = traceback.extract_stack()
+    last_file = trace[0][0]
+    last_line = trace[0][1]
+
+    file(log_file, 'a').write(time.strftime("%Y-%m-%d %H:%M:%S\t") + last_file + "\t" + str(last_line) + "\t" + text + "\n")
+
 #=======================================================================
 class PageEditor(wx.Panel):
     """
@@ -305,6 +319,8 @@ class PageAlarm(wx.Panel):
 
             print time.strftime('%Y-%m-%d %H:%M')
             print row
+
+            dolog(str(row))
             
             send_headers = {
               'User-Agent' : 'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1',
@@ -333,6 +349,7 @@ class PageAlarm(wx.Panel):
                 if len(get_list) > 1 :
                     # txt = u"博客域名收录网页数量：" + get_list[1]
                     txt = time.strftime('%Y-%m-%d %H:%M ') + title + "," + get_list[1]
+                    dolog("speak out the text: " + txt)
 
 
             self.engine.say(txt)
