@@ -24,6 +24,13 @@ import socket   # 用于控制超时等
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 import wx.lib.masked          as masked
 
+
+# 语音 tts
+import pyttsx
+# 剪切板
+import win32clipboard 
+
+
 # 获得可执行文件所在路径(注意 os.path.getcwd 获得的是命令行启动的当前路径)
 exe_dir = os.path.dirname(sys.argv[0])
 
@@ -770,6 +777,8 @@ class HickFrame(wx.Frame):
     _id_menu_hide_menubar = wx.NewId()
     # 隐藏主 frame
     _id_menu_hide_frame = wx.NewId()
+    # 语音引擎
+    _tts = pyttsx.init()
     
     def __init__(self):
         """主 Frame : 创建 AUI 管理器以及 Notebook 、菜单等"""
@@ -820,13 +829,23 @@ class HickFrame(wx.Frame):
 #        Alarm.Show()    # 注意这里如果是 ShowModal 的话，会不必要的阻塞程序
         
         self.Center()
+
+    #-----------------------------------------
+    def say(self, text):
+        """
+        使用语音引擎: 做一些是否存在引擎等的判断
+        """
+        self._tts.say(u"滚犊子，" + text)
+        self._tts.runAndWait()
+
+        
         
     def initSystem(self):
         """
         系统环境的初始化相关操作
         """
         # 注册表操作
-        program_file = os.path.join(exe_dir, 'hickpad.exe')
+        program_file = os.path.join(exe_dir, 'hickpad.pyw')
         key = win32api.RegOpenKey(win32con.HKEY_CURRENT_USER,
                                   'Software\\Microsoft\\Windows\\CurrentVersion\\Run', 
                                   0, win32con.KEY_ALL_ACCESS)
@@ -934,27 +953,43 @@ class HickFrame(wx.Frame):
         """任务栏操作"""
         self.onHide(self)
         event.Skip()
-        
+
     def onClearDns(self, event):
+
+        win32clipboard.OpenClipboard()
+        data = win32clipboard.GetClipboardData()
+        win32clipboard.CloseClipboard()
+        txt = data.decode("gb2312")
+
+        self.say(txt)
+
+        # dlg = wx.MessageDialog(self, u"清除系统 DNS Cache",
+        #                        u"提示",
+        #                        wx.OK | wx.ICON_INFORMATION)
+        # dlg.ShowModal()
+        # dlg.Destroy()
+
+
+
         """
         清除系统 DNS cache
         """
         # 清系统 dns
-        dll = ctypes.windll.LoadLibrary('dnsapi.dll')
-        dll.DnsFlushResolverCache()  
-        # 浏览器 dns cache 设置
-        key = win32api.RegOpenKey(win32con.HKEY_CURRENT_USER,
-                                  'Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings', 
-                                  0, win32con.KEY_ALL_ACCESS)
-        win32api.RegSetValueEx(key, 'DnsCacheTimeout', 0, win32con.REG_DWORD, 1) # 注意这里还区分类型，必须是数字 1 不能是字符 '1'
-        win32api.RegSetValueEx(key, 'ServerInfoTimeOut', 0, win32con.REG_DWORD, 1)
+        # dll = ctypes.windll.LoadLibrary('dnsapi.dll')
+        # dll.DnsFlushResolverCache()  
+        # # 浏览器 dns cache 设置
+        # key = win32api.RegOpenKey(win32con.HKEY_CURRENT_USER,
+        #                           'Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings', 
+        #                           0, win32con.KEY_ALL_ACCESS)
+        # win32api.RegSetValueEx(key, 'DnsCacheTimeout', 0, win32con.REG_DWORD, 1) # 注意这里还区分类型，必须是数字 1 不能是字符 '1'
+        # win32api.RegSetValueEx(key, 'ServerInfoTimeOut', 0, win32con.REG_DWORD, 1)
         
-        # 提示清除成功
-        dlg = wx.MessageDialog(self, u"清除系统 DNS Cache 成功。\n浏览器的 DNS Cache 超时时间被设置为 1s (如果是第一次执行，需要重启系统以后才能生效)。",
-                               u"提示",
-                               wx.OK | wx.ICON_INFORMATION)
-        dlg.ShowModal()
-        dlg.Destroy()
+        # # 提示清除成功
+        # dlg = wx.MessageDialog(self, u"清除系统 DNS Cache 成功。\n浏览器的 DNS Cache 超时时间被设置为 1s (如果是第一次执行，需要重启系统以后才能生效)。",
+        #                        u"提示",
+        #                        wx.OK | wx.ICON_INFORMATION)
+        # dlg.ShowModal()
+        # dlg.Destroy()
         
     def onAbout(self, event):
         info = u"开发计划：\n"
@@ -1044,6 +1079,8 @@ class HickFrame(wx.Frame):
         """
         退出事件
         """
+        text = u"你不要我了，再见。"
+        self.say(text)
         ### 在这之前需要保存文件等
         self.taskBarIcon.Destroy()
         self.Destroy()

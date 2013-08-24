@@ -17,7 +17,7 @@ options = {
 data_files = [("ico", ["ico/hickpad.ico"])]
 
 # Hickpad.ico
-setup(windows=[{"script": "hickpad.py", "icon_resources": [(1, "ico/hickpad.ico")]}], options = options, zipfile = None, data_files = data_files)
+setup(windows=[{"script": "hickpad.pyw", "icon_resources": [(1, "ico/hickpad.ico")]}], options = options, zipfile = None, data_files = data_files)
 
 
 
