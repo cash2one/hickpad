@@ -771,8 +771,8 @@ class HickFrame(wx.Frame):
     _id_menu_exit = wx.NewId()
     # 置顶菜单 id
     _id_menu_tool_top = wx.NewId()
-    # 清除 dns
-    _id_menu_clear_dns = wx.NewId()
+    # 阅读剪切板文本
+    _id_menu_read_clip = wx.NewId()
     # 隐藏主菜单的 id
     _id_menu_hide_menubar = wx.NewId()
     # 隐藏主 frame
@@ -855,9 +855,9 @@ class HickFrame(wx.Frame):
         # 主程序显示隐藏控制
         self.RegisterHotKey(self._id_menu_hide_frame, win32con.MOD_CONTROL|win32con.MOD_ALT, ord('H'))
         self.Bind(wx.EVT_HOTKEY, self.onSwitchDisplay, id=self._id_menu_hide_frame)
-        # 清除系统 dns
-        self.RegisterHotKey(self._id_menu_clear_dns, win32con.MOD_CONTROL|win32con.MOD_ALT, ord('D'))
-        self.Bind(wx.EVT_HOTKEY, self.onClearDns, id=self._id_menu_clear_dns)
+        # 阅读剪切板文本
+        self.RegisterHotKey(self._id_menu_read_clip, win32con.MOD_CONTROL|win32con.MOD_ALT, ord('D'))
+        self.Bind(wx.EVT_HOTKEY, self.onReadClipBorad, id=self._id_menu_read_clip)
         # 置顶窗口 topmost
         self.RegisterHotKey(self._id_menu_tool_top, win32con.MOD_CONTROL|win32con.MOD_ALT, ord('T'))
         self.Bind(wx.EVT_HOTKEY, self.onSetTopMost, id=self._id_menu_tool_top)
@@ -925,8 +925,8 @@ class HickFrame(wx.Frame):
         
         # 工具菜单
         toolMenu = wx.Menu()
-        dns_cleaner = toolMenu.Append(self._id_menu_clear_dns, u"清除系统 DNS(&D)\tCtrl+Alt+D")
-        self.Bind(wx.EVT_MENU, self.onClearDns, dns_cleaner)
+        clipboard_reader = toolMenu.Append(self._id_menu_read_clip, u"阅读剪切板文本(&D)\tCtrl+Alt+D")
+        self.Bind(wx.EVT_MENU, self.onReadClipBorad, clipboard_reader)
         topmost = toolMenu.Append(self._id_menu_tool_top, u'活动窗口置顶(&T)\tCtrl+Alt+T')
         self.Bind(wx.EVT_MENU, self.onSetTopMost, topmost)
         
@@ -954,7 +954,7 @@ class HickFrame(wx.Frame):
         self.onHide(self)
         event.Skip()
 
-    def onClearDns(self, event):
+    def onReadClipBorad(self, event):
 
         win32clipboard.OpenClipboard()
         data = win32clipboard.GetClipboardData()
@@ -962,14 +962,6 @@ class HickFrame(wx.Frame):
         txt = data.decode("gb2312")
 
         self.say(txt)
-
-        # dlg = wx.MessageDialog(self, u"清除系统 DNS Cache",
-        #                        u"提示",
-        #                        wx.OK | wx.ICON_INFORMATION)
-        # dlg.ShowModal()
-        # dlg.Destroy()
-
-
 
         """
         清除系统 DNS cache
