@@ -66,6 +66,10 @@ def dolog(text, name = ''):
     last_file = trace[0][0]
     last_line = trace[0][1]
 
+    # 参数字符处理
+    if isinstance(text, unicode):
+        text = text.encode("UTF-8")
+
     file(log_file, 'a').write(time.strftime("%Y-%m-%d %H:%M:%S\t") + last_file + "\t" + str(last_line) + "\t" + text + "\n")
 
 dolog("hickpad启动了") ### 要用中文以免文件不是 utf8
