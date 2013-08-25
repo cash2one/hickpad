@@ -35,21 +35,14 @@ import win32clipboard
 # 抓取分析网页
 from bs4 import BeautifulSoup
 
+############################################## 全局操作和变量
 # 获得可执行文件所在路径(注意 os.path.getcwd 获得的是命令行启动的当前路径)
 exe_dir = os.path.dirname(sys.argv[0])
+# tts 引擎同时只能有一个操作
+tts_running = False
+tts_engine = pyttsx.init()
 
-if wx.Platform == '__WXMSW__':
-    face1 = 'Fixedsys'
-    face2 = 'Times New Roman'
-    face3 = 'Fixedsys'
-    pb = 9
-else:
-    face1 = 'Helvetica'
-    face2 = 'Times'
-    face3 = 'Courier'
-    pb = 12
-    
-
+###------------------ 全局函数： 记录 log
 """
 记录 log 的调试函数: 默认去当前文件夹
     注意中文可能某些输入的时候是 unicode 的话，有这样的差别:
@@ -70,8 +63,41 @@ def dolog(text, name = ''):
     if isinstance(text, unicode):
         text = text.encode("UTF-8")
 
-    file(log_file, 'a').write(time.strftime("%Y-%m-%d %H:%M:%S\t") + last_file + "\t" + str(last_line) + "\t" + text + "\n")
+    all_str = time.strftime("%Y-%m-%d %H:%M:%S\t") + last_file + "\t" + str(last_line) + "\t" + text + "\n"
+    print all_str
+    file(log_file, 'a').write(all_str)
+###------------------ 全局函数： tts 说话
+def tts_say(text):
+    # 如果当前有使用语音引擎，则记录 log 并返回 false
+    global tts_running
+    if tts_running:
+        dolog("语音引擎使用中，暂时不能使用")
+        return
 
+    # 文本必须是 unicode ， 所以这里需要转码: 也只接受 utf 8 的
+    if not isinstance(text, unicode):
+        text = text.decode("UTF-8")
+
+    tts_running = True
+    tts_engine.say(text)
+    tts_engine.runAndWait()
+    tts_running = False
+
+    dolog(time.strftime("%Y-%m-%d %H:%M:%S\t") + u"语音引擎执行完以下内容: " + text)
+
+if wx.Platform == '__WXMSW__':
+    face1 = 'Fixedsys'
+    face2 = 'Times New Roman'
+    face3 = 'Fixedsys'
+    pb = 9
+else:
+    face1 = 'Helvetica'
+    face2 = 'Times'
+    face3 = 'Courier'
+    pb = 12
+    
+
+tts_say("小爷来了，还不快跪下")
 dolog("hickpad启动了") ### 要用中文以免文件不是 utf8
 
 #=======================================================================
@@ -218,10 +244,8 @@ class PageAlarm(wx.Panel):
         ### 任务执行器, 没 30 分钟执行一次， 注意太短了会导致任务没执行完，下次任务又开始
         self.timerTask = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.onCheckTask, self.timerTask)
-        self.timerTask.Start(1000 * 60 * 60) # 暂定每小时执行一次
+        self.timerTask.Start(1000 * 10) # 定期检查， 检查时间不能短于最长的提醒时间，要不然一直提醒容易无法退出
 
-        ### tts
-        self.engine = pyttsx.init()
 
         
     def setListCtrl(self):
@@ -314,64 +338,82 @@ class PageAlarm(wx.Panel):
         任务检查
         """
 
-        dolog("start check task")
-        
-        db_file = os.path.join(exe_dir, 'data.db3')
-        conn = sqlite3.connect(db_file)
-        c = conn.cursor()
-        items = []
-        i = 1
-        check_sql = "select id,name,url,rev1,title from tasks where type < 2 and next_time <= '%s'" % (time.strftime('%Y-%m-%d %H:%M'), )
-        c.execute(check_sql)
-#        print time.strftime('%Y-%m-%d %H:%M')
-        to_alarm = []
-        for row in c:
-            ### google 网站收录数需要特别处理下
-            url = row[2]
-            selector = row[3]
-            title = row[4]
+        dolog("开始检查语音任务")
 
-            # print time.strftime('%Y-%m-%d %H:%M')
-            # print row
+        ### 改版成走 url 取
+        url = "http://hick.com/notes"
+        res = urllib2.urlopen(url)
+        soup = BeautifulSoup(res.read())
+        notes_dom = soup.select("div.note")
+        if len(notes_dom):
+            for item in notes_dom:
+                title = item.select("div.title")[0].string
+                content = item.select("div.content")[0].string
+                note_time = item.select("div.note_time")[0].string
+                method = item.select("div.method")[0].string
 
-            dolog(str(row))
+                say_text = note_time + "," + title +  "," + content
+                tts_say(say_text)
+
+
+
+        ### 以下代码暂时保留
+#         db_file = os.path.join(exe_dir, 'data.db3')
+#         conn = sqlite3.connect(db_file)
+#         c = conn.cursor()
+#         items = []
+#         i = 1
+#         check_sql = "select id,name,url,rev1,title from tasks where type < 2 and next_time <= '%s'" % (time.strftime('%Y-%m-%d %H:%M'), )
+#         c.execute(check_sql)
+# #        print time.strftime('%Y-%m-%d %H:%M')
+#         to_alarm = []
+#         for row in c:
+#             ### google 网站收录数需要特别处理下
+#             url = row[2]
+#             selector = row[3]
+#             title = row[4]
+
+#             # print time.strftime('%Y-%m-%d %H:%M')
+#             # print row
+
+#             dolog(str(row))
             
-            send_headers = {
-              'User-Agent' : 'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1',
-              "Accept": "image/gif, image/jpeg, application/xaml+xml,  */*",
-            }
-            proto, rest = urllib.splittype(url)  
-            host, rest = urllib.splithost(rest) 
-            send_headers['Host'] = host
-            req = urllib2.Request(url, headers=send_headers) 
-            response = urllib2.urlopen(req)
-            content = response.read()
-            reg = re.compile(r'''> +''')
-            content = reg.subn('>', content)[0]
-            soup = BeautifulSoup(content)
-            try_list = (selector, 'div.artic_text')
-            for selector in try_list:
-                selected_item = soup.select(selector)
-                if len(selected_item) > 0:
-                    break
+#             send_headers = {
+#               'User-Agent' : 'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1',
+#               "Accept": "image/gif, image/jpeg, application/xaml+xml,  */*",
+#             }
+#             proto, rest = urllib.splittype(url)  
+#             host, rest = urllib.splithost(rest) 
+#             send_headers['Host'] = host
+#             req = urllib2.Request(url, headers=send_headers) 
+#             response = urllib2.urlopen(req)
+#             content = response.read()
+#             reg = re.compile(r'''> +''')
+#             content = reg.subn('>', content)[0]
+#             soup = BeautifulSoup(content)
+#             try_list = (selector, 'div.artic_text')
+#             for selector in try_list:
+#                 selected_item = soup.select(selector)
+#                 if len(selected_item) > 0:
+#                     break
 
-            txt = time.strftime('%Y-%m-%d %H:%M') + u"没找到"
-            if len(selected_item) > 0:
-                get_str =  selected_item[0].string
-                get_list = get_str.split(" ")
+#             txt = time.strftime('%Y-%m-%d %H:%M') + u"没找到"
+#             if len(selected_item) > 0:
+#                 get_str =  selected_item[0].string
+#                 get_list = get_str.split(" ")
 
-                if len(get_list) > 1 :
-                    # txt = u"博客域名收录网页数量：" + get_list[1]
-                    txt = time.strftime('%Y-%m-%d %H:%M ') + title + "," + get_list[1]
-                    dolog(txt.encode("UTF-8")) 
+#                 if len(get_list) > 1 :
+#                     # txt = u"博客域名收录网页数量：" + get_list[1]
+#                     txt = time.strftime('%Y-%m-%d %H:%M ') + title + "," + get_list[1]
+#                     dolog(txt.encode("UTF-8")) 
 
 
-            self.engine.say(txt)
-            self.engine.runAndWait()
-            # print "find sth"
-            # print selected_item                
+#             self.engine.say(txt)
+#             self.engine.runAndWait()
+#             # print "find sth"
+#             # print selected_item                
 
-        conn.close()
+#         conn.close()
         
     def onDoubleClick(self, event):
         # curr_item 为行索引，从 0 开始的
@@ -898,8 +940,6 @@ class HickFrame(wx.Frame):
     _id_menu_hide_menubar = wx.NewId()
     # 隐藏主 frame
     _id_menu_hide_frame = wx.NewId()
-    # 语音引擎
-    _tts = pyttsx.init()
     
     def __init__(self):
         """主 Frame : 创建 AUI 管理器以及 Notebook 、菜单等"""
@@ -951,15 +991,7 @@ class HickFrame(wx.Frame):
         
         self.Center()
 
-    #-----------------------------------------
-    def say(self, text):
-        """
-        使用语音引擎: 做一些是否存在引擎等的判断
-        """
-        self._tts.say(u"滚犊子，" + text)
-        self._tts.runAndWait()
-
-        
+       
         
     def initSystem(self):
         """
@@ -1192,9 +1224,8 @@ class HickFrame(wx.Frame):
         """
         退出事件
         """
-        text = u"你不要我了，再见。"
-        self.say(text)
-        ### 在这之前需要保存文件等
+        dolog("hickpad退出了")
+        tts_say("亲亲的，小爷走了")
         self.taskBarIcon.Destroy()
         self.Destroy()
 
