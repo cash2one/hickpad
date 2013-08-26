@@ -80,7 +80,7 @@ def tts_say(text):
 
     tts_running = True
     tts_engine.say(text)
-    tts_engine.runAndWait()
+    # tts_engine.runAndWait()
     tts_running = False
 
     dolog(time.strftime("%Y-%m-%d %H:%M:%S\t") + u"语音引擎执行完以下内容: " + text)
@@ -342,6 +342,15 @@ class PageAlarm(wx.Panel):
 
         ### 改版成走 url 取
         url = "http://hick.com/notes"
+        # 打开 url 出错的可能性比较大
+        try:
+            res = urllib2.urlopen(url)
+        except urllib2.URLError, e: 
+            dolog("err when open url:  %s, err: %s" % (url, e))
+        except:
+            dolog("unknow error: %s" % (e,))
+
+
         res = urllib2.urlopen(url)
         soup = BeautifulSoup(res.read())
         notes_dom = soup.select("div.note")
