@@ -66,6 +66,15 @@ def dolog(text, name = ''):
     all_str = time.strftime("%Y-%m-%d %H:%M:%S\t") + last_file + "\t" + str(last_line) + "\t" + text + "\n"
     print all_str
     file(log_file, 'a').write(all_str)
+### 检查 log 文件大小
+def checklog(name = ''):
+    if len(name) < 1:
+        name = 'log.txt'
+    log_file = os.path.join(os.path.dirname(sys.argv[0]), name)  
+    print log_file
+    if os.path.isfile(log_file):
+        return os.path.getsize(log_file)
+
 ###------------------ 全局函数： tts 说话
 def tts_say(text):
     # 如果当前有使用语音引擎，则记录 log 并返回 false
@@ -99,6 +108,11 @@ else:
 
 tts_say("咚咚咚咚，小爷来了")
 dolog("hickpad启动了") ### 要用中文以免文件不是 utf8
+
+log_size = checklog()
+# 5M 提醒清理
+if log_size > 5000000 :
+    tts_say("日志文件有点大了，清理一下吧")
 
 #=======================================================================
 class PageEditor(wx.Panel):
