@@ -97,7 +97,7 @@ else:
     pb = 12
     
 
-tts_say("小爷来了，还不快跪下")
+tts_say("荡当，荡当，小爷来了")
 dolog("hickpad启动了") ### 要用中文以免文件不是 utf8
 
 #=======================================================================
@@ -244,7 +244,7 @@ class PageAlarm(wx.Panel):
         ### 任务执行器, 没 30 分钟执行一次， 注意太短了会导致任务没执行完，下次任务又开始
         self.timerTask = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.onCheckTask, self.timerTask)
-        self.timerTask.Start(1000 * 10) # 定期检查， 检查时间不能短于最长的提醒时间，要不然一直提醒容易无法退出
+        self.timerTask.Start(1000 * 6) # 定期检查， 检查时间不能短于最长的提醒时间，要不然一直提醒容易无法退出
 
 
         
@@ -341,7 +341,8 @@ class PageAlarm(wx.Panel):
         dolog("开始检查语音任务")
 
         ### 改版成走 url 取
-        url = "http://hick.com/notes"
+        url = "http://www.hick.com/notes"
+        url = "http://www.webrube.com/notes"
         # 打开 url 出错的可能性比较大
         try:
             res = urllib2.urlopen(url)
@@ -351,7 +352,7 @@ class PageAlarm(wx.Panel):
             dolog("unknow error: %s" % (e,))
 
 
-        res = urllib2.urlopen(url)
+        
         soup = BeautifulSoup(res.read())
         notes_dom = soup.select("div.note")
         if len(notes_dom):
@@ -360,9 +361,14 @@ class PageAlarm(wx.Panel):
                 content = item.select("div.content")[0].string
                 note_time = item.select("div.note_time")[0].string
                 method = item.select("div.method")[0].string
+                note_id = item.select("div.id")[0].string
 
                 say_text = note_time + "," + title +  "," + content
                 tts_say(say_text)
+                # 删除提醒
+                res = urllib2.urlopen("%s/del/%s" % (url, note_id))
+
+        dolog("任务检查后执行任务数: %s" % (len(notes_dom,)))
 
 
 
@@ -1011,7 +1017,8 @@ class HickFrame(wx.Frame):
         key = win32api.RegOpenKey(win32con.HKEY_CURRENT_USER,
                                   'Software\\Microsoft\\Windows\\CurrentVersion\\Run', 
                                   0, win32con.KEY_ALL_ACCESS)
-        win32api.RegSetValueEx(key, 'HickeyStartup', 0, win32con.REG_SZ, program_file) # 注意这里还区分类型，必须是数字 1 不能是字符 '1'
+        ##### 暂时不注册，靠在启动里手工添加
+        # win32api.RegSetValueEx(key, 'HickeyStartup', 0, win32con.REG_SZ, program_file) # 注意这里还区分类型，必须是数字 1 不能是字符 '1'
         
         # 热键注册: hide/show main frame (depend__on win32con)
         # 主程序显示隐藏控制
@@ -1123,7 +1130,7 @@ class HickFrame(wx.Frame):
         win32clipboard.CloseClipboard()
         txt = data.decode("gb2312")
 
-        self.say(txt)
+        tts_say(txt)
 
         """
         清除系统 DNS cache
