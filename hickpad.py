@@ -17,6 +17,10 @@ import win32con # 系统热键
 import win32api
 import win32gui
 
+import clipboard
+import html2text
+import win32clipboard
+
 # 网络相关操作
 import urllib
 import urllib2
@@ -1156,12 +1160,31 @@ class HickFrame(wx.Frame):
 
     def onReadClipBorad(self, event):
 
-        win32clipboard.OpenClipboard()
-        data = win32clipboard.GetClipboardData()
-        win32clipboard.CloseClipboard()
-        txt = data.decode("gb2312")
 
-        tts_say(txt)
+        # html 形势获得获得剪切板的
+        get_str = clipboard.GetHtml()
+        msg = '好啦'
+        if isinstance(get_str, str):
+            get_str = get_str.replace('\xa0', '') 
+            get_str =  get_str.decode('utf-8','ignore')
+            md_str = html2text.html2text(get_str)
+            # 写回剪切板
+            win32clipboard.OpenClipboard(0)
+            win32clipboard.EmptyClipboard()
+            r = win32clipboard.SetClipboardText(md_str)
+            print r
+            print md_str
+            if r < 1:
+                msg = "保存剪切板失败"
+        else:
+            msg = "剪切板没字符串"
+
+        # win32clipboard.OpenClipboard()
+        # data = win32clipboard.GetClipboardData()
+        # win32clipboard.CloseClipboard()
+        # txt = data.decode("gb2312")
+
+        tts_say(msg)
 
         """
         清除系统 DNS cache
