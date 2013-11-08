@@ -35,6 +35,8 @@ import win32clipboard
 # 抓取分析网页
 from bs4 import BeautifulSoup
 
+import threading
+
 ############################################## 全局操作和变量
 # 获得可执行文件所在路径(注意 os.path.getcwd 获得的是命令行启动的当前路径)
 exe_dir = os.path.dirname(sys.argv[0])
@@ -218,6 +220,50 @@ class PageNote(PageEditor):
         
         return content
 
+class ThreadTTSCheck(threading.Thread):
+    """检查语音提醒的线程"""
+    def __init__(self):
+        super(ThreadTTSCheck, self).__init__()
+        # dolog("thread init %s " % threading.currentThread().getName())
+        self.start()
+        
+    ### 线程执行逻辑
+    def run(self):
+        dolog("开始检查语音任务 ThreadTTSCheck %s" % threading.currentThread().getName())
+
+        ### 改版成走 url 取
+        # url = "http://www.hick.com/notes"
+        url = "http://www.webrube.com/notes"
+        # 打开 url 出错的可能性比较大
+        try:
+            res = urllib2.urlopen(url)
+        except urllib2.URLError, e: 
+            dolog("err when open url:  %s, err: %s" % (url, e))
+        except:
+            dolog("unknow error: %s" % (e,))
+
+
+        
+        soup = BeautifulSoup(res.read())
+        notes_dom = soup.select("div.note")
+        if len(notes_dom):
+            for item in notes_dom:
+                title = item.select("div.title")[0].string
+                content = item.select("div.content")[0].string
+                note_time = item.select("div.note_time")[0].string
+                method = item.select("div.method")[0].string
+                note_id = item.select("div.id")[0].string
+
+                say_text = note_time + "," + title +  "," + content
+                tts_say(say_text)
+                # 删除提醒
+                res = urllib2.urlopen("%s/del/%s" % (url, note_id))
+
+        dolog("任务检查后执行任务数: %s" % (len(notes_dom,)))
+
+
+        # wx.CallAfter(self.postTime, u" %s 线程结束" % tname)
+
 
 class PageAlarm(wx.Panel):
     
@@ -255,13 +301,15 @@ class PageAlarm(wx.Panel):
         self.Bind(wx.EVT_TIMER, self.onCheckAlarm, self.timer)
         self.timer.Start(5000)    # 每 5s 检查一次
 
-        ### 任务执行器, 没 30 分钟执行一次， 注意太短了会导致任务没执行完，下次任务又开始
+        ### 语音提醒检查器
+        # 注意太短了会导致任务没执行完，下次任务又开始
         self.timerTask = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.onCheckTask, self.timerTask)
-        self.timerTask.Start(1000 * 6) # 定期检查， 检查时间不能短于最长的提醒时间，要不然一直提醒容易无法退出
+        self.Bind(wx.EVT_TIMER, self.onTTSTask, self.timerTask)
+        self.timerTask.Start(1000 * 60 * 1) # 单位为毫秒，定期检查， 检查时间不能短于最长的提醒时间，要不然一直提醒容易无法退出
+        # self.timerTask.Start(1000 * 3 * 1) # 单位为毫秒，定期检查， 检查时间不能短于最长的提醒时间，要不然一直提醒容易无法退出
 
 
-        
+    
     def setListCtrl(self):
         """
         从数据库获得任务数据
@@ -347,45 +395,14 @@ class PageAlarm(wx.Panel):
             Alarm.Show()    # 注意这里如果是 ShowModal 的话，会不必要的阻塞程序
 
 
-    def onCheckTask(self, event):
+    def onTTSTask(self, event):
         """
         任务检查
         """
 
-        dolog("开始检查语音任务")
-
-        ### 改版成走 url 取
-        url = "http://www.hick.com/notes"
-        url = "http://www.webrube.com/notes"
-        # 打开 url 出错的可能性比较大
-        try:
-            res = urllib2.urlopen(url)
-        except urllib2.URLError, e: 
-            dolog("err when open url:  %s, err: %s" % (url, e))
-        except:
-            dolog("unknow error: %s" % (e,))
-
-
-        
-        soup = BeautifulSoup(res.read())
-        notes_dom = soup.select("div.note")
-        if len(notes_dom):
-            for item in notes_dom:
-                title = item.select("div.title")[0].string
-                content = item.select("div.content")[0].string
-                note_time = item.select("div.note_time")[0].string
-                method = item.select("div.method")[0].string
-                note_id = item.select("div.id")[0].string
-
-                say_text = note_time + "," + title +  "," + content
-                tts_say(say_text)
-                # 删除提醒
-                res = urllib2.urlopen("%s/del/%s" % (url, note_id))
-
-        dolog("任务检查后执行任务数: %s" % (len(notes_dom,)))
-
-
-
+        dolog("开始检查语音任务 onTTSTask")
+        ThreadTTSCheck()
+        return
         ### 以下代码暂时保留
 #         db_file = os.path.join(exe_dir, 'data.db3')
 #         conn = sqlite3.connect(db_file)
@@ -1027,7 +1044,7 @@ class HickFrame(wx.Frame):
         系统环境的初始化相关操作
         """
         # 注册表操作
-        program_file = os.path.join(exe_dir, 'hickpad.pyw')
+        program_file = os.path.join(exe_dir, 'release.pyw')
         key = win32api.RegOpenKey(win32con.HKEY_CURRENT_USER,
                                   'Software\\Microsoft\\Windows\\CurrentVersion\\Run', 
                                   0, win32con.KEY_ALL_ACCESS)
@@ -1242,9 +1259,11 @@ class HickFrame(wx.Frame):
         切换显示和隐藏
         """
         if self.IsShown():
+            tts_say("藏起来啦")
             self.Iconize(True)
             self.Show(False)
         else:
+            tts_say("现形啦")
             self.Iconize(False)
             self.Show(True)
             self.Raise()
