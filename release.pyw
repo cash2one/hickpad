@@ -1249,12 +1249,16 @@ class HickFrame(wx.Frame):
         ### 从 MSDN 看到窗体 window 的介绍，测试出下面的运行返回 8 时表示是顶层窗口，其他的一般是 0 ，更多参考 http://msdn.microsoft.com/en-us/library/ms632599(VS.85).aspx
         if win_style & win32con.WS_EX_TOPMOST:
             top_flag = win32con.HWND_NOTOPMOST
+            msg = "下去"
         else:
             top_flag = win32con.HWND_TOPMOST
+            msg = "上来"
             
         #self.log(top_flag)
         # 设置置顶
         win32gui.SetWindowPos(curr_frame, top_flag, 0 , 0, 0, 0, win32con.SWP_NOMOVE|win32con.SWP_NOSIZE)
+
+        tts_say(msg)
         
 
     def onToggleMenuBar(self, event):
