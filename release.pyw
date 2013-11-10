@@ -41,12 +41,21 @@ from bs4 import BeautifulSoup
 
 import threading
 
+# record
+import cv2
+import pyaudio
+import wave
+
+
 ############################################## 全局操作和变量
 # 获得可执行文件所在路径(注意 os.path.getcwd 获得的是命令行启动的当前路径)
 exe_dir = os.path.dirname(sys.argv[0])
 # tts 引擎同时只能有一个操作
 tts_running = False
 tts_engine = pyttsx.init()
+
+# 标记摄像头使用状态： 貌似同时使用会冲突
+camera_record_using = False
 
 ###------------------ 全局函数： 记录 log
 """
@@ -111,6 +120,9 @@ else:
     face3 = 'Courier'
     pb = 12
     
+
+# tts_say("好吧")
+# sys.exit()
 
 tts_say("咚咚咚咚，小爷来了")
 dolog("hickpad启动了") ### 要用中文以免文件不是 utf8
@@ -268,6 +280,96 @@ class ThreadTTSCheck(threading.Thread):
 
         # wx.CallAfter(self.postTime, u" %s 线程结束" % tname)
 
+class ThreadRecord(threading.Thread):
+    """录像线程"""
+    def __init__(self):
+        super(ThreadRecord, self).__init__()
+        dolog("record video thread init %s " % threading.currentThread().getName())
+        self.start()
+        
+    ### 线程执行逻辑
+    def run(self):
+        global camera_record_using
+
+        ### 等待摄像头释放：
+        while camera_record_using:
+            time.sleep(3)
+
+        camera_record_using = True
+
+        cap=cv2.VideoCapture(0)
+        width,height=640,480
+        fps=25
+        fourcc = cv2.cv.CV_FOURCC('C','V','I','D')
+        filename = "%srec_%s.AVI" % (r'd:/temp/', time.strftime('%Y%m%d_%H%M%S'))
+        w = cv2.VideoWriter(filename, fourcc, fps, (width, height), 1)#see blog
+        start_time = time.time()
+        dolog("start record video thread %s at %s" % (threading.currentThread().getName(), time.strftime('%Y-%m-%d %H:%M:%S')))
+        end_time = start_time + 15 * 60  # 秒数
+
+        while(True):
+            
+            f,frame=cap.read()
+            frame=cv2.resize(frame,(width,height)) 
+            # cv2.imshow('Video',frame) # 去掉这行就不显示视频窗口了
+            wret = w.write(frame)#write frame to video file
+            now_time = time.time()
+            if now_time > end_time:
+                break
+
+        camera_record_using = False
+        cap.release()
+        cv2.destroyAllWindows()
+        dolog("end record video thread %s at %s" % (threading.currentThread().getName(), time.strftime('%Y-%m-%d %H:%M:%S')))
+
+
+class ThreadRecordSound(threading.Thread):
+    """录音线程"""
+    def __init__(self):
+        super(ThreadRecordSound, self).__init__()
+        dolog("record sound thread init %s at %s" % (threading.currentThread().getName(), time.strftime('%Y-%m-%d %H:%M:%S')))
+        self.start()
+        
+    ### 线程执行逻辑
+    def run(self):
+        dolog("start recored sound thread %s at %s" % (threading.currentThread().getName(), time.strftime('%Y-%m-%d %H:%M:%S')))
+
+
+        CHUNK = 1024
+        FORMAT = pyaudio.paInt16
+        CHANNELS = 2
+        RATE = 44100
+        RECORD_SECONDS = 60 * 15   # 15 分钟
+        WAVE_OUTPUT_FILENAME = r"d:/temp/rec_%s.wav" % time.strftime('%Y%m%d_%H%M%S')
+
+        p = pyaudio.PyAudio()
+
+        stream = p.open(format=FORMAT,
+                        channels=CHANNELS,
+                        rate=RATE,
+                        input=True,
+                        frames_per_buffer=CHUNK)
+
+
+        frames = []
+
+        for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+            data = stream.read(CHUNK)
+            frames.append(data)
+
+        dolog("done recored sound thread %s at %s" % (threading.currentThread().getName(), time.strftime('%Y-%m-%d %H:%M:%S')))
+
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+        wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(p.get_sample_size(FORMAT))
+        wf.setframerate(RATE)
+        wf.writeframes(b''.join(frames))
+        wf.close()
+
 
 class PageAlarm(wx.Panel):
     
@@ -309,7 +411,7 @@ class PageAlarm(wx.Panel):
         # 注意太短了会导致任务没执行完，下次任务又开始
         self.timerTask = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.onTTSTask, self.timerTask)
-        self.timerTask.Start(1000 * 60 * 1) # 单位为毫秒，定期检查， 检查时间不能短于最长的提醒时间，要不然一直提醒容易无法退出
+        self.timerTask.Start(1000 * 60 * 5) # 正式时间间隔为 5 分钟
         # self.timerTask.Start(1000 * 3 * 1) # 单位为毫秒，定期检查， 检查时间不能短于最长的提醒时间，要不然一直提醒容易无法退出
 
 
@@ -984,12 +1086,17 @@ class HickFrame(wx.Frame):
     _id_menu_exit = wx.NewId()
     # 置顶菜单 id
     _id_menu_tool_top = wx.NewId()
+    # 录制 id
+    _id_menu_tool_record = wx.NewId()
     # 阅读剪切板文本
     _id_menu_read_clip = wx.NewId()
     # 隐藏主菜单的 id
     _id_menu_hide_menubar = wx.NewId()
     # 隐藏主 frame
     _id_menu_hide_frame = wx.NewId()
+
+    ### 录制定时器
+    _recordTimer = None
     
     def __init__(self):
         """主 Frame : 创建 AUI 管理器以及 Notebook 、菜单等"""
@@ -999,6 +1106,10 @@ class HickFrame(wx.Frame):
         
         # 这里是应用程序任务栏 ico
         self.SetIcon(wx.Icon('ico/Hickpad.ico', wx.BITMAP_TYPE_ICO))
+
+        # 录制定时器
+        self._recordTimer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.onRecordTask, self._recordTimer)
 
         # AUI 管理器
         self.aui_mgr = AUIManager(self)
@@ -1065,6 +1176,9 @@ class HickFrame(wx.Frame):
         # 置顶窗口 topmost
         self.RegisterHotKey(self._id_menu_tool_top, win32con.MOD_CONTROL|win32con.MOD_ALT, ord('T'))
         self.Bind(wx.EVT_HOTKEY, self.onSetTopMost, id=self._id_menu_tool_top)
+        # 录制
+        self.RegisterHotKey(self._id_menu_tool_record, win32con.MOD_CONTROL|win32con.MOD_ALT, ord('R'))
+        self.Bind(wx.EVT_HOTKEY, self.onToggleRecord, id=self._id_menu_tool_record)
         #self.RegisterHotKey(self.Id_Hotkey_Top, win32con.MOD_CONTROL|win32con.MOD_ALT, ord('T'))
         #self.Bind(wx.EVT_HOTKEY, self.OnSetTopMost, id=self.Id_Hotkey_Top)
         #wx.EVT_COMMAND
@@ -1133,6 +1247,8 @@ class HickFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.onReadClipBorad, clipboard_reader)
         topmost = toolMenu.Append(self._id_menu_tool_top, u'活动窗口置顶(&T)\tCtrl+Alt+T')
         self.Bind(wx.EVT_MENU, self.onSetTopMost, topmost)
+        toggle_record = toolMenu.Append(self._id_menu_tool_record, u'录制(&R)\tCtrl+Alt+R')
+        self.Bind(wx.EVT_MENU, self.onToggleRecord, toggle_record)
         
         menubar.Append(toolMenu, u"工具(&T)") 
         
@@ -1260,6 +1376,25 @@ class HickFrame(wx.Frame):
 
         tts_say(msg)
         
+
+    def onToggleRecord(self, event):
+        """
+        录制: 以十五分钟为周期，定期启动录制
+        """
+        if self._recordTimer.IsRunning():
+            tts_say("好吧")
+            self._recordTimer.Stop()
+        else:
+            tts_say("那个谁")
+            ThreadRecord()
+            ThreadRecordSound()
+            self._recordTimer.Start(1000 * 60 * 15)  # 15分钟一次
+            # self._recordTimer.Start(1000 * 60 * 15)  # 60s
+
+    ### 启动录制线程进行工作
+    def onRecordTask(self, event):
+        ThreadRecord()
+        ThreadRecordSound()
 
     def onToggleMenuBar(self, event):
         """
