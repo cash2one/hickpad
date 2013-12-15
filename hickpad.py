@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 #coding=utf8
 
+### 默认情况下还需要安装的包:  
+# 手工下载安装的 wxpython, pywin32(http://sourceforge.net/projects/pywin32/files/pywin32/)
+# pip 安装的 beautifulsoup4 html2text pyttsx 
+# 这俩没确认： pyaudio cv2 , 前者安装出错了
+
 import wx
 import wx.lib.agw.aui as aui
 import wx.stc
@@ -41,10 +46,10 @@ from bs4 import BeautifulSoup
 
 import threading
 
-# record
-import cv2
-import pyaudio
-import wave
+# record ###hicktodo 公司机器上不支持，不载入
+# import cv2
+# import pyaudio
+# import wave
 
 
 ############################################## 全局操作和变量
@@ -1281,7 +1286,7 @@ class HickFrame(wx.Frame):
         get_str = clipboard.GetHtml()
         msg = '好啦'
         if isinstance(get_str, str):
-            get_str = get_str.replace('\xa0', '') 
+            # get_str = get_str.replace('\xa0', '')  ### 该替换会导致一些字符出不来，比如 "研发"的"研"字
             get_str =  get_str.decode('utf-8','ignore')
             md_str = html2text.html2text(get_str)
             # 写回剪切板
