@@ -51,6 +51,12 @@ import threading
 # import pyaudio
 # import wave
 
+### 操作成功的 splash 闪屏
+try:
+    from agw import advancedsplash as AS
+except ImportError: # if it's not there locally, try the wxPython lib.
+    import wx.lib.agw.advancedsplash as AS
+
 
 ############################################## 全局操作和变量
 # 获得可执行文件所在路径(注意 os.path.getcwd 获得的是命令行启动的当前路径)
@@ -1282,6 +1288,9 @@ class HickFrame(wx.Frame):
     def onReadClipBorad(self, event):
 
 
+
+        # 默认的成功的闪屏 png
+        splash_png = 'splash.png'
         # html 形势获得获得剪切板的
         get_str = clipboard.GetHtml()
         msg = '好啦'
@@ -1295,15 +1304,32 @@ class HickFrame(wx.Frame):
             r = win32clipboard.SetClipboardText(md_str)
             if r < 1:
                 msg = "保存剪切板失败"
+                splash_png = 'splash_err.png'
         else:
             msg = "复制的不是网页"
+            splash_png = 'splash_err.png'
 
         # win32clipboard.OpenClipboard()
         # data = win32clipboard.GetClipboardData()
         # win32clipboard.CloseClipboard()
         # txt = data.decode("gb2312")
 
+
+
         tts_say(msg)
+
+        ### 提示闪屏
+        pn = os.path.normpath(os.path.join(os.path.dirname(sys.argv[0]), splash_png))
+        bitmap = wx.Bitmap(pn, wx.BITMAP_TYPE_PNG)
+        shadow = wx.WHITE
+        
+        frame = AS.AdvancedSplash(self, bitmap=bitmap, timeout=2000,
+                                  agwStyle=AS.AS_TIMEOUT |
+                                  AS.AS_CENTER_ON_PARENT |
+                                  AS.AS_SHADOW_BITMAP,
+                                  shadowcolour=shadow)
+
+
 
         """
         清除系统 DNS cache
