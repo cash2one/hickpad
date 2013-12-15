@@ -1,2 +1,1 @@
-setup.py py2exe
-pause
+python f:\Python\PyInstaller-2.1\pyinstaller.py --noconfirm --noconsole --onefile --icon=hickpad.ico hickpad.py
