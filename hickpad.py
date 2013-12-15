@@ -975,7 +975,7 @@ class SystrayIco(wx.TaskBarIcon):
         wx.TaskBarIcon.__init__(self)
         self.frame = frame
         # 创建系统托盘图标并绑定事件
-        self.SetIcon(wx.Icon(name='ico/Hickpad.ico', type=wx.BITMAP_TYPE_ICO), self.frame.GetTitle())
+        self.SetIcon(wx.Icon(name='hickpad.ico', type=wx.BITMAP_TYPE_ICO), self.frame.GetTitle())
         
         # 暂时还不知道怎么只响应双击，不响应单击
         #self.Bind(wx.EVT_TASKBAR_LEFT_UP, self.frame.onSwitchDisplay)
@@ -1116,7 +1116,7 @@ class HickFrame(wx.Frame):
                           style=wx.MINIMIZE_BOX|wx.MAXIMIZE_BOX|wx.RESIZE_BORDER|wx.SYSTEM_MENU|wx.CAPTION|wx.STAY_ON_TOP)
         
         # 这里是应用程序任务栏 ico
-        self.SetIcon(wx.Icon('ico/Hickpad.ico', wx.BITMAP_TYPE_ICO))
+        self.SetIcon(wx.Icon('hickpad.ico', wx.BITMAP_TYPE_ICO))
 
         # 录制定时器
         self._recordTimer = wx.Timer(self)
@@ -1170,7 +1170,7 @@ class HickFrame(wx.Frame):
         系统环境的初始化相关操作
         """
         # 注册表操作
-        program_file = os.path.join(exe_dir, 'release.pyw')
+        program_file = os.path.join(exe_dir, 'hickpad.exe')
         key = win32api.RegOpenKey(win32con.HKEY_CURRENT_USER,
                                   'Software\\Microsoft\\Windows\\CurrentVersion\\Run', 
                                   0, win32con.KEY_ALL_ACCESS)
