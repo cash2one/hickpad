@@ -1296,8 +1296,16 @@ class HickFrame(wx.Frame):
         msg = '好啦'
         if isinstance(get_str, str):
             # get_str = get_str.replace('\xa0', '')  ### 该替换会导致一些字符出不来，比如 "研发"的"研"字
+            ### 不替换好像容易出问号: 输出的时候观察才发现如下替换奏效
+            get_str = get_str.replace(' ', '&nbsp;')
             get_str =  get_str.decode('utf-8','ignore')
             md_str = html2text.html2text(get_str)
+
+            # 换行后边跟问号的 替换成换行
+            # reg = re.compile(r'''\n\?''')
+            # ret = reg.subn("\n", md_str)
+            # md_str = ret[0]
+
             # 写回剪切板
             win32clipboard.OpenClipboard(0)
             win32clipboard.EmptyClipboard()
