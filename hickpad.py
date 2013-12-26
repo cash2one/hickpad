@@ -1301,8 +1301,8 @@ class HickFrame(wx.Frame):
             get_str =  get_str.decode('utf-8','ignore')
             md_str = html2text.html2text(get_str)
 
-            # 比较常见两个  ** 以后有空格的，去掉空格:  有空格的 markdown 识别有问题
-            reg = re.compile(r'''\*\*[\s]+''')
+            # 比较常见两个  ** 以后有空格的，去掉空格， 换行得留着
+            reg = re.compile(r'''\*\*[ ]+''')
             ret = reg.subn("**", md_str)
             md_str = ret[0]
             # 替换连续多个---三个以上的 *  (有上面的保证，三个以上才可以)
