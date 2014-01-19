@@ -22,7 +22,6 @@ import win32con # 系统热键
 import win32api
 import win32gui
 
-import clipboard
 import html2text
 import win32clipboard
 
@@ -1292,7 +1291,7 @@ class HickFrame(wx.Frame):
         # 默认的成功的闪屏 png
         splash_png = 'splash.png'
         # html 形势获得获得剪切板的
-        get_str = clipboard.GetHtml()
+        get_str = "just for test"
         msg = '好啦'
         if isinstance(get_str, str):
             # get_str = get_str.replace('\xa0', '')  ### 该替换会导致一些字符出不来，比如 "研发"的"研"字
