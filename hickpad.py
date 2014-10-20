@@ -22,7 +22,9 @@ import win32con # 系统热键
 import win32api
 import win32gui
 
+import html2text
 import win32clipboard
+import clipboard
 
 # 网络相关操作
 import urllib
@@ -1295,14 +1297,18 @@ class HickFrame(wx.Frame):
         # 默认的成功的闪屏 png
         splash_png = 'splash.png'
         # html 形势获得获得剪切板的
-        get_str = "just for test"
+        # get_str = "just for test"
+        get_str = clipboard.GetHtml()
+
+        # print get_str
+
         msg = '好啦'
         if isinstance(get_str, str):
             # get_str = get_str.replace('\xa0', '')  ### 该替换会导致一些字符出不来，比如 "研发"的"研"字
             ### 不替换好像容易出问号: 输出的时候观察才发现如下替换奏效
             get_str = get_str.replace(' ', '&nbsp;')
             get_str =  get_str.decode('utf-8','ignore')
-            md_str = get_str
+            md_str = html2text.html2text(get_str)
 
             # 比较常见两个  ** 以后有空格的，去掉空格， 换行得留着
             reg = re.compile(r'''\*\*[ ]+''')
