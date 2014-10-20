@@ -3,7 +3,7 @@
 
 ### 默认情况下还需要安装的包:  
 # 手工下载安装的 wxpython, pywin32(http://sourceforge.net/projects/pywin32/files/pywin32/)
-# pip 安装的 beautifulsoup4 html2text pyttsx 
+# pip 安装的 beautifulsoup4 html2text pyttsx(确认系统中有安装 sapi5  http://msdn.microsoft.com/en-us/library/ms723627(VS.85).aspx 等，具体参考 https://github.com/parente/pyttsx , win 7 下始终没成功)
 # 这俩没确认： pyaudio cv2 , 前者安装出错了
 
 import wx
@@ -61,9 +61,11 @@ except ImportError: # if it's not there locally, try the wxPython lib.
 ############################################## 全局操作和变量
 # 获得可执行文件所在路径(注意 os.path.getcwd 获得的是命令行启动的当前路径)
 exe_dir = os.path.dirname(sys.argv[0])
+
+# win7 下配置失败，先干掉
 # tts 引擎同时只能有一个操作
-tts_running = False
-tts_engine = pyttsx.init()
+# tts_running = False
+# tts_engine = pyttsx.init()
 
 # 标记摄像头使用状态： 貌似同时使用会冲突
 camera_record_using = False
@@ -103,6 +105,9 @@ def checklog(name = ''):
 
 ###------------------ 全局函数： tts 说话
 def tts_say(text):
+    # win7 下配置失败，先干掉
+    return True
+
     # 如果当前有使用语音引擎，则记录 log 并返回 false
     global tts_running
     if tts_running:
