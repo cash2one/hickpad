@@ -3,7 +3,7 @@
 
 ### 默认情况下还需要安装的包:  
 # 手工下载安装的 wxpython, pywin32(http://sourceforge.net/projects/pywin32/files/pywin32/)
-# pip 安装的 beautifulsoup4 html2text pyttsx 
+# pip 安装的 beautifulsoup4 pyttsx 
 # 这俩没确认： pyaudio cv2 , 前者安装出错了
 
 import wx
@@ -22,8 +22,6 @@ import win32con # 系统热键
 import win32api
 import win32gui
 
-import clipboard
-import html2text
 import win32clipboard
 
 # 网络相关操作
@@ -1170,7 +1168,7 @@ class HickFrame(wx.Frame):
         系统环境的初始化相关操作
         """
         # 注册表操作
-        program_file = os.path.join(exe_dir, 'release.pyw')
+        program_file = os.path.join(exe_dir, 'hickpad.exe')
         key = win32api.RegOpenKey(win32con.HKEY_CURRENT_USER,
                                   'Software\\Microsoft\\Windows\\CurrentVersion\\Run', 
                                   0, win32con.KEY_ALL_ACCESS)
@@ -1292,19 +1290,23 @@ class HickFrame(wx.Frame):
         # 默认的成功的闪屏 png
         splash_png = 'splash.png'
         # html 形势获得获得剪切板的
-        get_str = clipboard.GetHtml()
+        get_str = "just for test"
         msg = '好啦'
         if isinstance(get_str, str):
             # get_str = get_str.replace('\xa0', '')  ### 该替换会导致一些字符出不来，比如 "研发"的"研"字
             ### 不替换好像容易出问号: 输出的时候观察才发现如下替换奏效
             get_str = get_str.replace(' ', '&nbsp;')
             get_str =  get_str.decode('utf-8','ignore')
-            md_str = html2text.html2text(get_str)
+            md_str = get_str
 
-            # 换行后边跟问号的 替换成换行
-            # reg = re.compile(r'''\n\?''')
-            # ret = reg.subn("\n", md_str)
-            # md_str = ret[0]
+            # 比较常见两个  ** 以后有空格的，去掉空格， 换行得留着
+            reg = re.compile(r'''\*\*[ ]+''')
+            ret = reg.subn("**", md_str)
+            md_str = ret[0]
+            # 替换连续多个---三个以上的 *  (有上面的保证，三个以上才可以)
+            reg = re.compile(r'''\*\*\*[\*\s]+''')
+            ret = reg.subn(" ", md_str)
+            md_str = ret[0]
 
             # 写回剪切板
             win32clipboard.OpenClipboard(0)

@@ -22,8 +22,6 @@ import win32con # 系统热键
 import win32api
 import win32gui
 
-import clipboard
-import html2text
 import win32clipboard
 
 # 网络相关操作
@@ -1297,14 +1295,14 @@ class HickFrame(wx.Frame):
         # 默认的成功的闪屏 png
         splash_png = 'splash.png'
         # html 形势获得获得剪切板的
-        get_str = clipboard.GetHtml()
+        get_str = "just for test"
         msg = '好啦'
         if isinstance(get_str, str):
             # get_str = get_str.replace('\xa0', '')  ### 该替换会导致一些字符出不来，比如 "研发"的"研"字
             ### 不替换好像容易出问号: 输出的时候观察才发现如下替换奏效
             get_str = get_str.replace(' ', '&nbsp;')
             get_str =  get_str.decode('utf-8','ignore')
-            md_str = html2text.html2text(get_str)
+            md_str = get_str
 
             # 比较常见两个  ** 以后有空格的，去掉空格， 换行得留着
             reg = re.compile(r'''\*\*[ ]+''')
@@ -1371,14 +1369,8 @@ class HickFrame(wx.Frame):
     def onAbout(self, event):
         info = u"开发计划：\n"
         feture_list = []
-        feture_list.append(u"\n=== beta1")
-        feture_list.append(u'+ 提醒功能')
-        feture_list.append(u'+ 便签程序的内容也暂时先保存到 sqlite')
-        feture_list.append(u'+ 显示提醒时显示即将到期的若干个提醒，并可以直接点击查看具体内容甚至修改调整')
         feture_list.append(u"\n=== beta2")
-        feture_list.append(u'+ 循环多次的周期性提醒')
-        feture_list.append(u'+ 系统启动时一起运行程序')
-        feture_list.append(u'+ 网络保存提醒和便签')
+        feture_list.append(u'+ save the notes in some place like cloud services')
         info += '\n'.join(feture_list)
         
         dlg = wx.MessageDialog(self, info,  u"提示", wx.OK)
