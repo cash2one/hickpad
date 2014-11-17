@@ -3,7 +3,7 @@
 
 ### 默认情况下还需要安装的包:  
 # 手工下载安装的 wxpython, pywin32(http://sourceforge.net/projects/pywin32/files/pywin32/)
-# pip 安装的 beautifulsoup4 pyttsx 
+# pip 安装的 beautifulsoup4 html2text pyttsx(确认系统中有安装 sapi5  http://msdn.microsoft.com/en-us/library/ms723627(VS.85).aspx 等，具体参考 https://github.com/parente/pyttsx , win 7 下始终没成功)
 # 这俩没确认： pyaudio cv2 , 前者安装出错了
 
 import wx
@@ -22,7 +22,9 @@ import win32con # 系统热键
 import win32api
 import win32gui
 
+import html2text
 import win32clipboard
+import clipboard
 
 # 网络相关操作
 import urllib
@@ -59,9 +61,11 @@ except ImportError: # if it's not there locally, try the wxPython lib.
 ############################################## 全局操作和变量
 # 获得可执行文件所在路径(注意 os.path.getcwd 获得的是命令行启动的当前路径)
 exe_dir = os.path.dirname(sys.argv[0])
+
+# win7 下配置失败，先干掉
 # tts 引擎同时只能有一个操作
-tts_running = False
-tts_engine = pyttsx.init()
+# tts_running = False
+# tts_engine = pyttsx.init()
 
 # 标记摄像头使用状态： 貌似同时使用会冲突
 camera_record_using = False
@@ -101,6 +105,9 @@ def checklog(name = ''):
 
 ###------------------ 全局函数： tts 说话
 def tts_say(text):
+    # win7 下配置失败，先干掉
+    return True
+
     # 如果当前有使用语音引擎，则记录 log 并返回 false
     global tts_running
     if tts_running:
@@ -1168,7 +1175,7 @@ class HickFrame(wx.Frame):
         系统环境的初始化相关操作
         """
         # 注册表操作
-        program_file = os.path.join(exe_dir, 'hickpad.exe')
+        program_file = os.path.join(exe_dir, 'release.pyw')
         key = win32api.RegOpenKey(win32con.HKEY_CURRENT_USER,
                                   'Software\\Microsoft\\Windows\\CurrentVersion\\Run', 
                                   0, win32con.KEY_ALL_ACCESS)
@@ -1290,14 +1297,18 @@ class HickFrame(wx.Frame):
         # 默认的成功的闪屏 png
         splash_png = 'splash.png'
         # html 形势获得获得剪切板的
-        get_str = "just for test"
+        # get_str = "just for test"
+        get_str = clipboard.GetHtml()
+
+        # print get_str
+
         msg = '好啦'
         if isinstance(get_str, str):
             # get_str = get_str.replace('\xa0', '')  ### 该替换会导致一些字符出不来，比如 "研发"的"研"字
             ### 不替换好像容易出问号: 输出的时候观察才发现如下替换奏效
             get_str = get_str.replace(' ', '&nbsp;')
             get_str =  get_str.decode('utf-8','ignore')
-            md_str = get_str
+            md_str = html2text.html2text(get_str)
 
             # 比较常见两个  ** 以后有空格的，去掉空格， 换行得留着
             reg = re.compile(r'''\*\*[ ]+''')
@@ -1364,14 +1375,8 @@ class HickFrame(wx.Frame):
     def onAbout(self, event):
         info = u"开发计划：\n"
         feture_list = []
-        feture_list.append(u"\n=== beta1")
-        feture_list.append(u'+ 提醒功能')
-        feture_list.append(u'+ 便签程序的内容也暂时先保存到 sqlite')
-        feture_list.append(u'+ 显示提醒时显示即将到期的若干个提醒，并可以直接点击查看具体内容甚至修改调整')
         feture_list.append(u"\n=== beta2")
-        feture_list.append(u'+ 循环多次的周期性提醒')
-        feture_list.append(u'+ 系统启动时一起运行程序')
-        feture_list.append(u'+ 网络保存提醒和便签')
+        feture_list.append(u'+ save the notes in some place like cloud services')
         info += '\n'.join(feture_list)
         
         dlg = wx.MessageDialog(self, info,  u"提示", wx.OK)
